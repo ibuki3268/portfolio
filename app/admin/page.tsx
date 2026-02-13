@@ -48,6 +48,7 @@ export default function AdminPage() {
       if (result.success) {
         setIsAuthenticated(true);
         sessionStorage.setItem("admin_authenticated", "true");
+        sessionStorage.setItem("admin_password", password);
         loadData();
       } else {
         setAuthError(result.error || "認証に失敗しました");
@@ -74,7 +75,9 @@ export default function AdminPage() {
   useEffect(() => {
     // セッションストレージで認証状態を確認
     const authenticated = sessionStorage.getItem("admin_authenticated");
-    if (authenticated === "true") {
+    const savedPassword = sessionStorage.getItem("admin_password");
+    if (authenticated === "true" && savedPassword) {
+      setPassword(savedPassword);
       setIsAuthenticated(true);
       loadData();
     }
@@ -87,6 +90,7 @@ export default function AdminPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-admin-password": password,
         },
         body: JSON.stringify(data),
       });
@@ -95,7 +99,16 @@ export default function AdminPage() {
         alert("保存しました！");
         router.push("/");
       } else {
-        alert("保存に失敗しました");
+        const result = await response.json();
+        if (result.type === "auth") {
+          alert("認証エラー: セッションが切れました。再ログインしてください。");
+          sessionStorage.removeItem("admin_password");
+          setPassword("");
+          setIsAuthenticated(false);
+          sessionStorage.removeItem("admin_authenticated");
+        } else {
+          alert(`保存に失敗しました: ${result.error}`);
+        }
       }
     } catch (error) {
       alert("保存に失敗しました");
