@@ -52,8 +52,8 @@ export async function getPortfolioData(): Promise<PortfolioData | null> {
       id,
       name,
       title,
-      abouts:portfolio_abouts ( content, sort_order ),
-      projects ( id, title, description, sort_order, tags:project_tags ( tag, sort_order ) )
+      abouts:portfolio_abouts!portfolio_abouts_portfolio_id_fkey ( content, sort_order ),
+      projects:projects!projects_portfolio_id_fkey ( id, title, description, sort_order, tags:project_tags!project_tags_project_id_fkey ( tag, sort_order ) )
     `
     )
     .eq("id", PORTFOLIO_ID)
