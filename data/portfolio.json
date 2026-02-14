@@ -1,5 +1,5 @@
 {
-  "name": "いぶき",
+  "name": "いぶきのポートフォリオ",
   "title": "Web Developer / Software Engineer",
   "about": [
     "ここに自己紹介文を記載します。あなたの経歴、得意な技術、興味のある分野などを書くことができます。複数の段落に分けることも可能です。",
@@ -9,17 +9,27 @@
     {
       "title": "プロジェクト 1",
       "description": "このプロジェクトの説明がここに入ります。使用した技術やポイントなどを記載できます。",
-      "tags": ["Next.js", "TypeScript", "Tailwind CSS"]
+      "tags": [
+        "Next.js",
+        "TypeScript",
+        "Tailwind CSS"
+      ]
     },
     {
       "title": "プロジェクト 2",
       "description": "このプロジェクトの説明がここに入ります。使用した技術やポイントなどを記載できます。",
-      "tags": ["React", "Node.js"]
+      "tags": [
+        "React",
+        "Node.js"
+      ]
     },
     {
       "title": "プロジェクト 3",
       "description": "このプロジェクトの説明がここに入ります。使用した技術やポイントなどを記載できます。",
-      "tags": ["Python", "FastAPI"]
+      "tags": [
+        "Python",
+        "FastAPI"
+      ]
     }
   ]
 }

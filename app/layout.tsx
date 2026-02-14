@@ -21,11 +21,27 @@ async function getPortfolioData() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const data = await getPortfolioData();
-  return {
-    title: `ポートフォリオ | ${data.name}`,
-    description: `${data.title} のポートフォリオサイト`,
-  };
+  try {
+    const data = await getPortfolioData();
+
+    if (!data?.name || !data?.title) {
+      return {
+        title: "ポートフォリオ",
+        description: "ポートフォリオサイト",
+      };
+    }
+
+    return {
+      title: `ポートフォリオ | ${data.name}`,
+      description: `${data.title} のポートフォリオサイト`,
+    };
+  } catch (error) {
+    console.error("Failed to load portfolio metadata", error);
+    return {
+      title: "ポートフォリオ",
+      description: "ポートフォリオサイト",
+    };
+  }
 }
 
 export default function RootLayout({
