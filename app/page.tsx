@@ -1,26 +1,13 @@
-import { promises as fs } from "fs";
-import path from "path";
 import Link from "next/link";
-
-type PortfolioData = {
-  name: string;
-  title: string;
-  about: string[];
-  projects: {
-    title: string;
-    description: string;
-    tags: string[];
-  }[];
-};
-
-async function getPortfolioData(): Promise<PortfolioData> {
-  const filePath = path.join(process.cwd(), "data", "portfolio.json");
-  const fileContents = await fs.readFile(filePath, "utf8");
-  return JSON.parse(fileContents);
-}
+import { getPortfolioData } from "@/lib/portfolio";
 
 export default async function Home() {
-  const data = await getPortfolioData();
+  const data = (await getPortfolioData()) ?? {
+    name: "",
+    title: "",
+    about: [],
+    projects: [],
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
