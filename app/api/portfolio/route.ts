@@ -4,6 +4,9 @@ import type { PortfolioData } from "@/lib/portfolio";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import type { Database } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const PORTFOLIO_ID = 1;
 const isDev = process.env.NODE_ENV !== "production";
 
