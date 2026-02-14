@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-type Database = {
+export type Database = {
   public: {
     Tables: {
       portfolio: {
