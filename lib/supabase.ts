@@ -1,10 +1,108 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type Database = {
+  public: {
+    Tables: {
+      portfolio: {
+        Row: {
+          id: number;
+          name: string;
+          title: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id: number;
+          name: string;
+          title: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          name?: string;
+          title?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      portfolio_abouts: {
+        Row: {
+          id: number;
+          portfolio_id: number;
+          content: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: number;
+          portfolio_id: number;
+          content: string;
+          sort_order: number;
+        };
+        Update: {
+          id?: number;
+          portfolio_id?: number;
+          content?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      projects: {
+        Row: {
+          id: number;
+          portfolio_id: number;
+          title: string;
+          description: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: number;
+          portfolio_id: number;
+          title: string;
+          description: string;
+          sort_order: number;
+        };
+        Update: {
+          id?: number;
+          portfolio_id?: number;
+          title?: string;
+          description?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      project_tags: {
+        Row: {
+          id: number;
+          project_id: number;
+          tag: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: number;
+          project_id: number;
+          tag: string;
+          sort_order: number;
+        };
+        Update: {
+          id?: number;
+          project_id?: number;
+          tag?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
+  };
+};
 
-let cachedClient: SupabaseClient | null = null;
+type SupabaseServerClient = SupabaseClient<Database>;
 
-export function getSupabaseServerClient(): SupabaseClient {
+let cachedClient: SupabaseServerClient | null = null;
+
+export function getSupabaseServerClient(): SupabaseServerClient {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -13,7 +111,7 @@ export function getSupabaseServerClient(): SupabaseClient {
   }
 
   if (!cachedClient) {
-    cachedClient = createClient(supabaseUrl, serviceRoleKey, {
+    cachedClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
   }
