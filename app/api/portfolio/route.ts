@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { getPortfolioData } from "@/lib/portfolio";
 import type { PortfolioData } from "@/lib/portfolio";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import type { Database } from "@/lib/supabase";
 
 const PORTFOLIO_ID = 1;
 const isDev = process.env.NODE_ENV !== "production";
+
+type PortfolioInsert = Database["public"]["Tables"]["portfolio"]["Insert"];
+type AboutInsert = Database["public"]["Tables"]["portfolio_abouts"]["Insert"];
+type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+type ProjectTagInsert = Database["public"]["Tables"]["project_tags"]["Insert"];
 
 type SupabaseErrorLike = {
   message?: string;
@@ -117,11 +123,15 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseServerClient();
 
-    const { error: upsertError } = await supabase.from("portfolio").upsert({
+    const portfolioRow: PortfolioInsert = {
       id: PORTFOLIO_ID,
       name: data.name,
       title: data.title,
-    });
+    };
+
+    const { error: upsertError } = await supabase
+      .from("portfolio")
+      .upsert(portfolioRow);
 
     if (upsertError) {
       return respondSupabaseError("save portfolio", upsertError);
@@ -136,11 +146,13 @@ export async function POST(request: Request) {
       return respondSupabaseError("update about", deleteAboutError);
     }
 
-    const aboutRows = data.about.map((content: string, index: number) => ({
-      portfolio_id: PORTFOLIO_ID,
-      content,
-      sort_order: index,
-    }));
+    const aboutRows: AboutInsert[] = data.about.map(
+      (content: string, index: number) => ({
+        portfolio_id: PORTFOLIO_ID,
+        content,
+        sort_order: index,
+      })
+    );
 
     if (aboutRows.length > 0) {
       const { error: insertAboutError } = await supabase
@@ -162,12 +174,14 @@ export async function POST(request: Request) {
     }
 
     if (data.projects.length > 0) {
-      const projectRows = data.projects.map((project, index) => ({
-        portfolio_id: PORTFOLIO_ID,
-        title: project.title,
-        description: project.description,
-        sort_order: index,
-      }));
+      const projectRows: ProjectInsert[] = data.projects.map(
+        (project, index) => ({
+          portfolio_id: PORTFOLIO_ID,
+          title: project.title,
+          description: project.description,
+          sort_order: index,
+        })
+      );
 
       const { data: insertedProjects, error: insertProjectsError } = await supabase
         .from("projects")
@@ -178,15 +192,15 @@ export async function POST(request: Request) {
         return respondSupabaseError("update projects", insertProjectsError);
       }
 
-      const tagRows = insertedProjects.flatMap(
+      const tagRows: ProjectTagInsert[] = insertedProjects.flatMap(
         (project: { id: number; sort_order: number | null }) => {
-        const projectIndex = project.sort_order ?? 0;
-        const tags = data.projects[projectIndex]?.tags ?? [];
-        return tags.map((tag, tagIndex) => ({
-          project_id: project.id,
-          tag,
-          sort_order: tagIndex,
-        }));
+          const projectIndex = project.sort_order ?? 0;
+          const tags = data.projects[projectIndex]?.tags ?? [];
+          return tags.map((tag, tagIndex) => ({
+            project_id: project.id,
+            tag,
+            sort_order: tagIndex,
+          }));
         }
       );
 
