@@ -1,21 +1,39 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { getPortfolioData } from "@/lib/portfolio";
+import type { PortfolioData } from "@/lib/portfolio";
+import { getSupabaseServerClient } from "@/lib/supabase";
 
-const dataFilePath = path.join(process.cwd(), "data", "portfolio.json");
+const PORTFOLIO_ID = 1;
+const isDev = process.env.NODE_ENV !== "production";
 
-type Project = {
-  title: string;
-  description: string;
-  tags: string[];
-};
+type SupabaseErrorLike = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+} | null;
 
-type PortfolioData = {
-  name: string;
-  title: string;
-  about: string[];
-  projects: Project[];
-};
+function formatSupabaseError(error: SupabaseErrorLike) {
+  if (!error) return null;
+  return {
+    message: error.message ?? "Unknown error",
+    code: error.code ?? null,
+    details: error.details ?? null,
+    hint: error.hint ?? null,
+  };
+}
+
+function respondSupabaseError(action: string, error: SupabaseErrorLike) {
+  console.error(`Supabase error during ${action}`, error);
+  return NextResponse.json(
+    {
+      error: `Failed to ${action}`,
+      type: "server",
+      ...(isDev ? { detail: formatSupabaseError(error) } : {}),
+    },
+    { status: 500 }
+  );
+}
 
 function validatePortfolioData(data: any): data is PortfolioData {
   if (!data || typeof data !== "object") return false;
@@ -42,9 +60,21 @@ function validatePortfolioData(data: any): data is PortfolioData {
 
 export async function GET() {
   try {
-    const fileContents = await fs.readFile(dataFilePath, "utf8");
-    const data = JSON.parse(fileContents);
-    return NextResponse.json(data);
+    const data = await getPortfolioData();
+
+    if (!data) {
+      return NextResponse.json({
+        name: "",
+        title: "",
+        about: [""],
+        projects: [],
+      } satisfies PortfolioData);
+    }
+
+    return NextResponse.json({
+      ...data,
+      about: data.about.length > 0 ? data.about : [""],
+    });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to read data" },
@@ -85,8 +115,92 @@ export async function POST(request: Request) {
       );
     }
 
-    // データ保存
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), "utf8");
+    const supabase = getSupabaseServerClient();
+
+    const { error: upsertError } = await supabase.from("portfolio").upsert({
+      id: PORTFOLIO_ID,
+      name: data.name,
+      title: data.title,
+    });
+
+    if (upsertError) {
+      return respondSupabaseError("save portfolio", upsertError);
+    }
+
+    const { error: deleteAboutError } = await supabase
+      .from("portfolio_abouts")
+      .delete()
+      .eq("portfolio_id", PORTFOLIO_ID);
+
+    if (deleteAboutError) {
+      return respondSupabaseError("update about", deleteAboutError);
+    }
+
+    const aboutRows = data.about.map((content: string, index: number) => ({
+      portfolio_id: PORTFOLIO_ID,
+      content,
+      sort_order: index,
+    }));
+
+    if (aboutRows.length > 0) {
+      const { error: insertAboutError } = await supabase
+        .from("portfolio_abouts")
+        .insert(aboutRows);
+
+      if (insertAboutError) {
+        return respondSupabaseError("update about", insertAboutError);
+      }
+    }
+
+    const { error: deleteProjectsError } = await supabase
+      .from("projects")
+      .delete()
+      .eq("portfolio_id", PORTFOLIO_ID);
+
+    if (deleteProjectsError) {
+      return respondSupabaseError("update projects", deleteProjectsError);
+    }
+
+    if (data.projects.length > 0) {
+      const projectRows = data.projects.map((project, index) => ({
+        portfolio_id: PORTFOLIO_ID,
+        title: project.title,
+        description: project.description,
+        sort_order: index,
+      }));
+
+      const { data: insertedProjects, error: insertProjectsError } = await supabase
+        .from("projects")
+        .insert(projectRows)
+        .select("id, sort_order");
+
+      if (insertProjectsError || !insertedProjects) {
+        return respondSupabaseError("update projects", insertProjectsError);
+      }
+
+      const tagRows = insertedProjects.flatMap(
+        (project: { id: number; sort_order: number | null }) => {
+        const projectIndex = project.sort_order ?? 0;
+        const tags = data.projects[projectIndex]?.tags ?? [];
+        return tags.map((tag, tagIndex) => ({
+          project_id: project.id,
+          tag,
+          sort_order: tagIndex,
+        }));
+        }
+      );
+
+      if (tagRows.length > 0) {
+        const { error: insertTagsError } = await supabase
+          .from("project_tags")
+          .insert(tagRows);
+
+        if (insertTagsError) {
+          return respondSupabaseError("update project tags", insertTagsError);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof SyntaxError) {
